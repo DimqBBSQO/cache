@@ -1,3 +1,3 @@
-module golang-ninja/basic
+module github.com/DimqBBSQO/cache
 
 go 1.18
