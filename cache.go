@@ -13,11 +13,13 @@ type value struct {
 
 type сache struct {
 	dataBase sync.Map
+	ticker   time.Ticker
 }
 
 func New() *сache {
 	c := &сache{
 		dataBase: sync.Map{},
+		ticker:   *time.NewTicker(time.Second),
 	}
 	go c.ClearDataBase()
 	return c
@@ -25,6 +27,7 @@ func New() *сache {
 
 func (c *сache) ClearDataBase() {
 	for {
+		<-c.ticker.C
 		c.dataBase.Range(func(k, v interface{}) bool {
 			val, _ := v.(value)
 			if val.t.Add(val.dur).Before(time.Now()) {
@@ -32,7 +35,6 @@ func (c *сache) ClearDataBase() {
 			}
 			return true
 		})
-		time.Sleep(time.Second / 2)
 	}
 }
 
@@ -40,8 +42,10 @@ func (c *сache) Set(key string, v interface{}, ttl time.Duration) {
 	c.dataBase.Store(key, value{v, time.Now(), ttl})
 }
 
-func (c *сache) Get(key string) (interface{}, bool) {
-	return c.dataBase.Load(key)
+func (c *сache) Get(key string) interface{} {
+	v, _ := c.dataBase.Load(key)
+	val := v.(value)
+	return val.v
 }
 
 func (c *сache) Delete(key string) {
