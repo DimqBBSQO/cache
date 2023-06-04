@@ -1,41 +1,49 @@
 package cache
 
-import "fmt"
+import (
+	"sync"
+	"time"
+)
 
-type Cache struct {
-	cache map[string]interface{}
+type value struct {
+	v   interface{}
+	t   time.Time
+	dur time.Duration
 }
 
-func NewCache() *Cache {
-	return &Cache{
-		cache: make(map[string]interface{}),
+type сache struct {
+	dataBase sync.Map
+}
+
+func New() *сache {
+	c := &сache{
+		dataBase: sync.Map{},
+	}
+	go c.ClearDataBase()
+	return c
+}
+
+func (c *сache) ClearDataBase() {
+	for {
+		c.dataBase.Range(func(k, v interface{}) bool {
+			val, _ := v.(value)
+			if val.t.Add(val.dur).Before(time.Now()) {
+				c.dataBase.Delete(k)
+			}
+			return true
+		})
+		time.Sleep(time.Second / 2)
 	}
 }
 
-func (c Cache) Set(key string, value interface{}) {
-	_, ok := c.cache[key]
-	if !ok {
-		c.cache[key] = value
-		fmt.Println("К кеш успешно записано значение ", key, " - ", value)
-	} else {
-		fmt.Println("В кэше уже присутствует ключ - ", key)
-	}
+func (c *сache) Set(key string, v interface{}, ttl time.Duration) {
+	c.dataBase.Store(key, value{v, time.Now(), ttl})
 }
 
-func (c Cache) Get(key string) interface{} {
-	value, ok := c.cache[key]
-	if ok {
-		return value
-	}
-	return nil
+func (c *сache) Get(key string) (interface{}, bool) {
+	return c.dataBase.Load(key)
 }
 
-func (c Cache) Delete(key string) {
-	_, ok := c.cache[key]
-	if ok {
-		delete(c.cache, key)
-		fmt.Println("Ключ ", key, " успешно удален!")
-	} else {
-		fmt.Println("Ключ ", key, " не найден!")
-	}
+func (c *сache) Delete(key string) {
+	c.dataBase.Delete(key)
 }
