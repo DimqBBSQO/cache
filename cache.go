@@ -43,9 +43,13 @@ func (c *сache) Set(key string, v interface{}, ttl time.Duration) {
 }
 
 func (c *сache) Get(key string) interface{} {
-	v, _ := c.dataBase.Load(key)
-	val := v.(value)
-	return val.v
+	v, ok := c.dataBase.Load(key)
+	if ok {
+		val := v.(value)
+		return val.v
+	}
+
+	return nil
 }
 
 func (c *сache) Delete(key string) {
